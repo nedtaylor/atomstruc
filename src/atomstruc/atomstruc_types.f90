@@ -23,6 +23,8 @@ module atomstruc__types
      !! The mask of the atoms of this species.
      real(real32), allocatable ,dimension(:,:) :: atom
      !! The atomic positions of the species (axis, atom).
+     real(real32), allocatable, dimension(:,:) :: force
+     !! The forces on the atoms of the species (axis, atom).
      real(real32) :: mass
      !! The mass of the species.
      real(real32) :: charge
@@ -69,6 +71,8 @@ module atomstruc__types
      !! Procedure to remove an atom from the basis.
      procedure, pass(this) :: remove_atoms
      !! Procedure to remove atoms from the basis.
+     procedure, pass(this) :: set_element_properties_to_default
+     !! Procedure to set the element properties to default values.
   end type basis_type
 
 
@@ -309,6 +313,7 @@ contains
                deallocate(this%spec(i)%atom_mask)
           if(allocated(this%spec(i)%atom_idx)) deallocate(this%spec(i)%atom_idx)
           if(allocated(this%spec(i)%atom)) deallocate(this%spec(i)%atom)
+          if(allocated(this%spec(i)%force)) deallocate(this%spec(i)%force)
        end do
        deallocate(this%spec)
     end if
@@ -322,6 +327,7 @@ contains
        allocate(this%spec(i)%atom_mask(basis%spec(i)%num), source = .true.)
        allocate(this%spec(i)%atom_idx(basis%spec(i)%num))
        allocate(this%spec(i)%atom(length_,basis%spec(i)%num))
+       allocate(this%spec(i)%force(3,basis%spec(i)%num))
 
        if(allocated(basis%spec(i)%atom_mask)) &
             this%spec(i)%atom_mask = basis%spec(i)%atom_mask
@@ -340,6 +346,7 @@ contains
           this%spec(i)%atom(:3,:) = basis%spec(i)%atom(:3,:)
           this%spec(i)%atom(4,:) = 1._real32
        end if
+       this%spec(i)%force(:,:) = basis%spec(i)%force(:,:)
        this%spec(i)%num = basis%spec(i)%num
        this%spec(i)%name = strip_null(basis%spec(i)%name)
 
@@ -650,6 +657,32 @@ contains
     end do
 
   end subroutine remove_atoms
+!###############################################################################
+
+
+!###############################################################################
+  subroutine set_element_properties_to_default(this)
+    !! Set the element properties to default values.
+    implicit none
+
+    ! Arguments
+    class(basis_type), intent(inout) :: this
+    !! Parent. The basis.
+
+    ! Local variables
+    integer :: i
+    !! Loop index.
+
+    do i = 1, this%nspec
+       call get_element_properties( &
+            element = this%spec(i)%name, &
+            charge = this%spec(i)%charge, &
+            mass = this%spec(i)%mass, &
+            radius = this%spec(i)%radius &
+       )
+    end do
+
+  end subroutine set_element_properties_to_default
 !###############################################################################
 
 end module atomstruc__types

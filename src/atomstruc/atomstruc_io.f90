@@ -926,10 +926,10 @@ contains
     !! Index variables.
     integer, allocatable, dimension(:) :: tmp_num
     !! Temporary array to store the number of atoms of each species.
-    real(real32), dimension(3) :: vec
-    !! Temporary array to store the atomic positions.
-    real(real32), allocatable, dimension(:,:,:) :: tmp_bas
-    !! Temporary array to store the atomic positions.
+    real(real32), dimension(3) :: vec, force
+    !! Temporary array to store the atomic positions and forces.
+    real(real32), allocatable, dimension(:,:,:) :: tmp_bas, tmp_force
+    !! Temporary array to store the atomic positions and forces.
     character(len=3) :: ctmp
     !! Temporary character variable.
     character(len=3), allocatable, dimension(:) :: tmp_spec
@@ -987,12 +987,14 @@ contains
           basis%nspec=basis%nspec+1
           tmp_spec(basis%nspec) = trim(adjustl(ctmp))
           tmp_bas(1:3,1,basis%nspec) = vec(1:3)
+          tmp_force(1:3,1,basis%nspec) = force(1:3)
           tmp_num(basis%nspec) = 1
        else
           checkspec: do j = 1, basis%nspec
              if(tmp_spec(j).eq.ctmp)then
                 tmp_num(j) = tmp_num(j) + 1
                 tmp_bas(1:3,tmp_num(j),j) = vec(1:3)
+                tmp_force(1:3,tmp_num(j),j) = force(1:3)
                 exit checkspec
              end if
           end do checkspec
@@ -1010,8 +1012,10 @@ contains
        basis%spec(i)%name = tmp_spec(i)
        basis%spec(i)%num = tmp_num(i)
        allocate(basis%spec(i)%atom(length_,tmp_num(i)))
+       allocate(basis%spec(i)%force(3,tmp_num(i)))
        basis%spec(i)%atom(:,:) = 0
        basis%spec(i)%atom(1:3,1:tmp_num(i)) = tmp_bas(1:3,1:tmp_num(i),i)
+       basis%spec(i)%force(1:3,1:tmp_num(i)) = tmp_force(1:3,1:tmp_num(i),i)
        write(buffer,'(I0,A)') basis%spec(i)%num,trim(basis%spec(i)%name)
        basis%sysname = basis%sysname//trim(buffer)
        if(i.lt.basis%nspec) basis%sysname = trim(adjustl(basis%sysname))//"_"
