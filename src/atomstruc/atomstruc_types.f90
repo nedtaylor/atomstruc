@@ -346,7 +346,8 @@ contains
           this%spec(i)%atom(:3,:) = basis%spec(i)%atom(:3,:)
           this%spec(i)%atom(4,:) = 1._real32
        end if
-       this%spec(i)%force(:,:) = basis%spec(i)%force(:,:)
+       if(allocated(basis%spec(i)%force)) &
+            this%spec(i)%force(:,:) = basis%spec(i)%force(:,:)
        this%spec(i)%num = basis%spec(i)%num
        this%spec(i)%name = strip_null(basis%spec(i)%name)
 
