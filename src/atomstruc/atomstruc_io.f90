@@ -977,6 +977,7 @@ contains
     allocate(tmp_spec(basis%natom))
     allocate(tmp_num(basis%natom))
     allocate(tmp_bas(length_,basis%natom,basis%natom))
+    allocate(tmp_force(3,basis%natom,basis%natom))
     tmp_num(:) = 0
     tmp_spec = ""
     tmp_bas = 0
