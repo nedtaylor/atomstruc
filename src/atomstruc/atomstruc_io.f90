@@ -192,7 +192,7 @@ contains
     ! read lattice
     !---------------------------------------------------------------------------
     do i = 1, 3
-       read(UNIT,*) (basis%lat(i,j),j=1,3)
+       read(UNIT,*) (basis%lat(j,i),j=1,3)
     end do
     basis%lat=scal*basis%lat
 
@@ -307,7 +307,7 @@ contains
     write(UNIT,'(A)') trim(adjustl(basis%sysname))
     write(UNIT,'(F15.9)') 1._real32
     do i = 1, 3
-       write(UNIT,'(3(F15.9))') basis%lat(i,:)
+       write(UNIT,'(3(F15.9))') basis%lat(:,i)
     end do
     write(fmt,'("(",I0,"(A,1X))")') basis%nspec
     write(UNIT,trim(adjustl(fmt))) (adjustl(basis%spec(j)%name),j=1,basis%nspec)
@@ -391,7 +391,7 @@ contains
        end if
     end do cellparam
     do i = 1, 3
-       read(UNIT,*) (basis%lat(i,j),j=1,3)
+       read(UNIT,*) (basis%lat(j,i),j=1,3)
     end do
 
 
@@ -510,7 +510,7 @@ contains
 
     write(UNIT,'("CELL_PARAMETERS angstrom")')
     do i = 1, 3
-       write(UNIT,'(3(F15.9))') basis%lat(i,:)
+       write(UNIT,'(3(F15.9))') basis%lat(:,i)
     end do
     write(UNIT,'("ATOMIC_SPECIES")')
     do i = 1, basis%nspec
@@ -618,7 +618,7 @@ contains
              read(store,*) units,(abc(i),i=1,3), (angle(j),j=1,3)
              basis%lat = convert_abc_to_lat(abc,angle,.false.)
           else
-             read(store,*) units,(basis%lat(i,:),i=1,3)
+             read(store,*) units,(basis%lat(:,i),i=1,3)
           end if
           cycle readloop
        end if lattice_if
@@ -755,7 +755,7 @@ contains
        end if
     end if
     do i = 1, 3
-       write(UNIT,'(3(F15.9))') basis%lat(i,:)
+       write(UNIT,'(3(F15.9))') basis%lat(:,i)
     end do
 
 10  write(UNIT,'("%endblock LATTICE_",A)') trim(string_lat)
@@ -965,7 +965,7 @@ contains
     end if
     index1 = index(buffer,'Lattice="') + 9
     index2 = index(buffer(index1:),'"') + index1 - 2
-    read(buffer(index1:index2),*) ( ( basis%lat(i,j), j = 1, 3), i = 1, 3)
+    read(buffer(index1:index2),*) ( ( basis%lat(j,i), j = 1, 3), i = 1, 3)
 
     index1 = index(buffer,'free_energy=') + 12
     read(buffer(index1:),*) basis%energy
@@ -1045,7 +1045,7 @@ contains
 
     write(UNIT,'(I0)') basis%natom
     write(UNIT,'(A,8(F0.8,1X),F0.8,A)', advance="no") &
-         'Lattice="',((basis%lat(i,j),j=1,3),i=1,3),'"'
+         'Lattice="',((basis%lat(j,i),j=1,3),i=1,3),'"'
     write(UNIT,'(A,F0.8)', advance="no") ' free_energy=',basis%energy
     write(UNIT,'(A)', advance="no") ' pbc="T T T"'
     if(basis%lcart)then

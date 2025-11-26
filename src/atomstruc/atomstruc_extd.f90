@@ -59,9 +59,9 @@ contains
     !       won't work for extremely acute/obtuse angle cells
     !       (due to diagonal path being shorter than individual lattice vectors)
     !---------------------------------------------------------------------------
-    amax = ceiling(max_bondlength/norm2(this%lat(1,:)))
-    bmax = ceiling(max_bondlength/norm2(this%lat(2,:)))
-    cmax = ceiling(max_bondlength/norm2(this%lat(3,:)))
+    amax = ceiling(max_bondlength/norm2(this%lat(:,1)))
+    bmax = ceiling(max_bondlength/norm2(this%lat(:,2)))
+    cmax = ceiling(max_bondlength/norm2(this%lat(:,3)))
 
 
     spec_loop: do is = 1, this%nspec
@@ -151,9 +151,9 @@ contains
     !       (due to diagonal path being shorter than individual lattice vectors)
     !---------------------------------------------------------------------------
     num_images = this%image_spec(is)%num
-    amax = ceiling(max_bondlength/norm2(this%lat(1,:)))
-    bmax = ceiling(max_bondlength/norm2(this%lat(2,:)))
-    cmax = ceiling(max_bondlength/norm2(this%lat(3,:)))
+    amax = ceiling(max_bondlength/norm2(this%lat(:,1)))
+    bmax = ceiling(max_bondlength/norm2(this%lat(:,2)))
+    cmax = ceiling(max_bondlength/norm2(this%lat(:,3)))
     dim = 3
     do i = 1, this%nspec
        if ( size(this%spec(i)%atom,1) .gt. dim) dim =  size(this%spec(i)%atom,1)
