@@ -62,11 +62,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(coreutils)
 # Re-enable BUILD_TESTS for our project
 set(BUILD_TESTS ON)
-find_package(coreutils REQUIRED)
-
-message(STATUS "coreutils home directory: ${coreutils_DIR}")
-message(STATUS "coreutils include directory: ${coreutils_INCLUDE_DIRS}")
-message(STATUS "coreutils source directory: ${coreutils_BUILD_DIRS}")
 
 # Only enable testing and options when this is the main project
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -161,17 +156,22 @@ set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${PPFLAGS}")
 
 # create the library
 add_library(${PROJECT_NAME} STATIC ${ALL_SOURCES})
-set(MODULE_DIR ${CMAKE_BUILD_PREFIX}/mod)
+set(MODULE_DIR ${CMAKE_CURRENT_BINARY_DIR}/mod)
 set_target_properties(${PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_DIR})
-target_link_libraries(${PROJECT_NAME} PUBLIC)
+target_link_libraries(${PROJECT_NAME} PUBLIC coreutils)
+target_include_directories(${PROJECT_NAME} PUBLIC $<TARGET_PROPERTY:coreutils,Fortran_MODULE_DIRECTORY>)
 
 
 
 # replace ".f90" with ".mod"
-string(REGEX REPLACE "\\.[^.]*$" ".mod" MODULE_FILES "${SRC_FILES}")
+set(MODULE_FILES "")
+foreach(src ${SRC_FILES})
+    get_filename_component(src_name ${src} NAME_WE)
+    list(APPEND MODULE_FILES "${MODULE_DIR}/${src_name}.mod")
+endforeach()
 
 # installation
-install(FILES ${MODULE_DIR}/${MODULE_FILES} DESTINATION include)
+install(FILES ${MODULE_FILES} DESTINATION include)
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
 
 # set compile options based on different build configurations
@@ -185,7 +185,6 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Parallel_Dev>:${DEVFLA
 
 # add library dependencies
 add_dependencies(${PROJECT_NAME} coreutils)
-target_link_libraries(${PROJECT_NAME} coreutils)
 
 # # include the build test directory only if this is the main project
 # if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTS)
