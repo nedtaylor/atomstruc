@@ -59,16 +59,16 @@ contains
     !       won't work for extremely acute/obtuse angle cells
     !       (due to diagonal path being shorter than individual lattice vectors)
     !---------------------------------------------------------------------------
-    amax = ceiling(max_bondlength/norm2(this%lat(:,1)))
-    bmax = ceiling(max_bondlength/norm2(this%lat(:,2)))
-    cmax = ceiling(max_bondlength/norm2(this%lat(:,3)))
+    amax = ceiling(max_bondlength/norm2(this%lat(1,:)))
+    bmax = ceiling(max_bondlength/norm2(this%lat(2,:)))
+    cmax = ceiling(max_bondlength/norm2(this%lat(3,:)))
 
 
     spec_loop: do is = 1, this%nspec
        allocate( &
             image_species(is)%atom( &
-                 size(this%spec(is)%atom,1), &
-                 this%spec(is)%num*(2*amax+2)*(2*bmax+2)*(2*cmax+2) &
+                 this%spec(is)%num*(2*amax+2)*(2*bmax+2)*(2*cmax+2), &
+                 size(this%spec(is)%atom,2) &
             ) &
        )
        image_species(is)%num = 0
@@ -79,17 +79,17 @@ contains
        atom_loop: do ia = 1, this%spec(is)%num
           if(.not.this%spec(is)%atom_mask(ia)) cycle atom_loop
           do i=-amax,amax+1,1
-             vtmp1(1) = this%spec(is)%atom(1,ia) + real(i, real32)
+             vtmp1(1) = this%spec(is)%atom(ia,1) + real(i, real32)
              do j=-bmax,bmax+1,1
-                vtmp1(2) = this%spec(is)%atom(2,ia) + real(j, real32)
+                vtmp1(2) = this%spec(is)%atom(ia,2) + real(j, real32)
                 do k=-cmax,cmax+1,1
                    if( i .eq. 0 .and. j .eq. 0 .and. k .eq. 0 ) cycle
-                   vtmp1(3) = this%spec(is)%atom(3,ia) + real(k, real32)
+                   vtmp1(3) = this%spec(is)%atom(ia,3) + real(k, real32)
                    if( get_distance_from_unit_cell(vtmp1, this%lat) .le. &
                         max_bondlength ) then
                       ! add the image to the list
                       image_species(is)%num = image_species(is)%num + 1
-                      image_species(is)%atom(:3,image_species(is)%num) = vtmp1
+                      image_species(is)%atom(image_species(is)%num,:3) = vtmp1
                    end if
                 end do
              end do
@@ -107,11 +107,11 @@ contains
        this%image_spec(is)%name = image_species(is)%name
        if(image_species(is)%num .eq. 0) cycle
        allocate(this%image_spec(is)%atom( &
-            size(image_species(is)%atom,1), &
-            image_species(is)%num &
+            image_species(is)%num, &
+            size(image_species(is)%atom,2) &
        ) )
        this%image_spec(is)%atom(:,:) = &
-            image_species(is)%atom(:,:image_species(is)%num)
+            image_species(is)%atom(:image_species(is)%num,:)
     end do
     this%num_images = sum( this%image_spec(:)%num )
 
@@ -151,37 +151,37 @@ contains
     !       (due to diagonal path being shorter than individual lattice vectors)
     !---------------------------------------------------------------------------
     num_images = this%image_spec(is)%num
-    amax = ceiling(max_bondlength/norm2(this%lat(:,1)))
-    bmax = ceiling(max_bondlength/norm2(this%lat(:,2)))
-    cmax = ceiling(max_bondlength/norm2(this%lat(:,3)))
+    amax = ceiling(max_bondlength/norm2(this%lat(1,:)))
+    bmax = ceiling(max_bondlength/norm2(this%lat(2,:)))
+    cmax = ceiling(max_bondlength/norm2(this%lat(3,:)))
     dim = 3
     do i = 1, this%nspec
-       if ( size(this%spec(i)%atom,1) .gt. dim) dim =  size(this%spec(i)%atom,1)
+       if ( size(this%spec(i)%atom,2) .gt. dim) dim =  size(this%spec(i)%atom,2)
     end do
     allocate( &
          image_species%atom( &
-              dim, &
-              num_images + (2*amax+2)*(2*bmax+2)*(2*cmax+2) &
+              num_images + (2*amax+2)*(2*bmax+2)*(2*cmax+2), &
+              dim &
          ) &
     )
     if( num_images .ne. 0 ) then
-       image_species%atom(:3,:num_images) = &
-            this%image_spec(is)%atom(:3,:num_images)
+       image_species%atom(:num_images,:3) = &
+            this%image_spec(is)%atom(:num_images,:3)
     end if
 
 
     do i=-amax,amax+1,1
-       vtmp1(1) = this%spec(is)%atom(1,ia) + real(i, real32)
+       vtmp1(1) = this%spec(is)%atom(ia,1) + real(i, real32)
        do j=-bmax,bmax+1,1
-          vtmp1(2) = this%spec(is)%atom(2,ia) + real(j, real32)
+          vtmp1(2) = this%spec(is)%atom(ia,2) + real(j, real32)
           do k=-cmax,cmax+1,1
              if( i .eq. 0 .and. j .eq. 0 .and. k .eq. 0 ) cycle
-             vtmp1(3) = this%spec(is)%atom(3,ia) + real(k, real32)
+             vtmp1(3) = this%spec(is)%atom(ia,3) + real(k, real32)
              if( get_distance_from_unit_cell(vtmp1, this%lat) .le. &
                   max_bondlength ) then
                 ! add the image to the list
                 num_images = num_images + 1
-                image_species%atom(:3,num_images) = vtmp1
+                image_species%atom(num_images,:3) = vtmp1
              end if
           end do
        end do
@@ -192,11 +192,11 @@ contains
     this%image_spec(is)%num = num_images
     if(allocated(this%image_spec(is)%atom)) deallocate(this%image_spec(is)%atom)
     allocate(this%image_spec(is)%atom( &
-         size(image_species%atom,1), &
-         num_images &
+         num_images, &
+         size(image_species%atom,2) &
     ) )
     this%image_spec(is)%atom(:,:) = &
-         image_species%atom(:,:num_images)
+         image_species%atom(:num_images,:)
     deallocate(image_species%atom)
     this%num_images = sum( this%image_spec(:)%num )
 

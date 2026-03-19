@@ -84,7 +84,7 @@ contains
     end if
     if(length_.eq.4)then
        do i = 1, basis%nspec
-          basis%spec(i)%atom(4,:) = 1._real32
+          basis%spec(i)%atom(:,4) = 1._real32
        end do
     end if
     do i = 1, basis%nspec
@@ -192,7 +192,7 @@ contains
     ! read lattice
     !---------------------------------------------------------------------------
     do i = 1, 3
-       read(UNIT,*) (basis%lat(j,i),j=1,3)
+       read(UNIT,*) (basis%lat(i,j),j=1,3)
     end do
     basis%lat=scal*basis%lat
 
@@ -242,12 +242,12 @@ contains
     do i = 1, basis%nspec
        allocate(basis%spec(i)%atom_idx(basis%spec(i)%num))
        allocate(basis%spec(i)%atom_mask(basis%spec(i)%num), source = .true.)
-       allocate(basis%spec(i)%atom(length_,basis%spec(i)%num))
+       allocate(basis%spec(i)%atom(basis%spec(i)%num,length_))
        basis%spec(i)%atom(:,:) = 0._real32
        do j = 1, basis%spec(i)%num
           natom = natom + 1
           basis%spec(i)%atom_idx(j) = natom
-          read(UNIT,*) (basis%spec(i)%atom(k,j),k=1,3)
+          read(UNIT,*) (basis%spec(i)%atom(j,k),k=1,3)
        end do
     end do
 
@@ -264,8 +264,8 @@ contains
     do i = 1, basis%nspec
        do j = 1, basis%spec(i)%num
           do k = 1, 3
-             basis%spec(i)%atom(k,j) = &
-                  basis%spec(i)%atom(k,j) - floor(basis%spec(i)%atom(k,j))
+             basis%spec(i)%atom(j,k) = &
+                  basis%spec(i)%atom(j,k) - floor(basis%spec(i)%atom(j,k))
           end do
        end do
     end do
@@ -307,7 +307,7 @@ contains
     write(UNIT,'(A)') trim(adjustl(basis%sysname))
     write(UNIT,'(F15.9)') 1._real32
     do i = 1, 3
-       write(UNIT,'(3(F15.9))') basis%lat(:,i)
+       write(UNIT,'(3(F15.9))') basis%lat(i,:)
     end do
     write(fmt,'("(",I0,"(A,1X))")') basis%nspec
     write(UNIT,trim(adjustl(fmt))) (adjustl(basis%spec(j)%name),j=1,basis%nspec)
@@ -316,7 +316,7 @@ contains
     write(UNIT,'(A)') trim(adjustl(string))
     do i = 1, basis%nspec
        do j = 1, basis%spec(i)%num
-          write(UNIT,'(3(F15.9))') basis%spec(i)%atom(1:3,j)
+          write(UNIT,'(3(F15.9))') basis%spec(i)%atom(j,1:3)
        end do
     end do
 
@@ -452,7 +452,7 @@ contains
           if(basis%spec(j)%name.eq.ctmp)then
              basis%spec(j)%num = basis%spec(j)%num + 1
              basis%spec(j)%atom_idx(basis%spec(j)%num) = i
-             basis%spec(j)%atom(1:3,basis%spec(j)%num) = tmpvec(1:3)
+             basis%spec(j)%atom(basis%spec(j)%num,1:3) = tmpvec(1:3)
              exit
           end if
        end do
@@ -471,8 +471,8 @@ contains
     do i = 1, basis%nspec
        do j = 1, basis%spec(i)%num
           do k = 1, 3
-             basis%spec(i)%atom(k,j) = &
-                  basis%spec(i)%atom(k,j) - floor( basis%spec(i)%atom(k,j) )
+             basis%spec(i)%atom(j,k) = &
+                  basis%spec(i)%atom(j,k) - floor( basis%spec(i)%atom(j,k) )
           end do
        end do
     end do
@@ -510,7 +510,7 @@ contains
 
     write(UNIT,'("CELL_PARAMETERS angstrom")')
     do i = 1, 3
-       write(UNIT,'(3(F15.9))') basis%lat(:,i)
+       write(UNIT,'(3(F15.9))') basis%lat(i,:)
     end do
     write(UNIT,'("ATOMIC_SPECIES")')
     do i = 1, basis%nspec
@@ -520,7 +520,7 @@ contains
     do i = 1, basis%nspec
        do j = 1, basis%spec(i)%num
           write(UNIT,'(A5,1X,3(F15.9))') &
-               basis%spec(i)%name,basis%spec(i)%atom(1:3,j)
+               basis%spec(i)%name,basis%spec(i)%atom(j,1:3)
        end do
     end do
 
@@ -618,7 +618,7 @@ contains
              read(store,*) units,(abc(i),i=1,3), (angle(j),j=1,3)
              basis%lat = convert_abc_to_lat(abc,angle,.false.)
           else
-             read(store,*) units,(basis%lat(:,i),i=1,3)
+             read(store,*) units,(basis%lat(i,:),i=1,3)
           end if
           cycle readloop
        end if lattice_if
@@ -653,7 +653,7 @@ contains
           basis%spec(1:basis%nspec)%name = tmp_spec(1:basis%nspec)
           do i = 1, basis%nspec
              basis%spec(i)%num = 0
-             allocate(basis%spec(i)%atom(length_,tmp_natom(i)))
+             allocate(basis%spec(i)%atom(tmp_natom(i),length_))
           end do
 
           call jump(UNIT,iline)
@@ -667,7 +667,7 @@ contains
              species_loop: do j = 1, basis%nspec
                 if(basis%spec(j)%name.eq.ctmp)then
                    basis%spec(j)%num = basis%spec(j)%num + 1
-                   basis%spec(j)%atom(1:3,basis%spec(j)%num) = dvtmp1(1:3)
+                   basis%spec(j)%atom(basis%spec(j)%num,1:3) = dvtmp1(1:3)
                    exit species_loop
                 end if
              end do species_loop
@@ -689,8 +689,8 @@ contains
     do i = 1, basis%nspec
        do j = 1, basis%spec(i)%num
           do k = 1, 3
-             basis%spec(i)%atom(k,j) = &
-                  basis%spec(i)%atom(k,j) - floor( basis%spec(i)%atom(k,j) )
+             basis%spec(i)%atom(j,k) = &
+                  basis%spec(i)%atom(j,k) - floor( basis%spec(i)%atom(j,k) )
           end do
        end do
     end do
@@ -755,7 +755,7 @@ contains
        end if
     end if
     do i = 1, 3
-       write(UNIT,'(3(F15.9))') basis%lat(:,i)
+       write(UNIT,'(3(F15.9))') basis%lat(i,:)
     end do
 
 10  write(UNIT,'("%endblock LATTICE_",A)') trim(string_lat)
@@ -765,7 +765,7 @@ contains
     do i = 1, basis%nspec
        do j = 1, basis%spec(i)%num
           write(UNIT,'(A5,1X,3(F15.9))') &
-               basis%spec(i)%name,basis%spec(i)%atom(1:3,j)
+               basis%spec(i)%name,basis%spec(i)%atom(j,1:3)
        end do
     end do
     write(UNIT,'("%endblock POSITIONS_",A)') trim(string_bas)
@@ -830,7 +830,7 @@ contains
     !---------------------------------------------------------------------------
     allocate(tmp_spec(basis%natom))
     allocate(tmp_num(basis%natom))
-    allocate(tmp_bas(length_,basis%natom,basis%natom))
+    allocate(tmp_bas(basis%natom,basis%natom,length_))
     tmp_num(:) = 0
     tmp_spec = ""
     tmp_bas = 0
@@ -840,13 +840,13 @@ contains
        if(.not.any(tmp_spec(1:basis%nspec).eq.ctmp))then
           basis%nspec = basis%nspec + 1
           tmp_spec(basis%nspec) = ctmp
-          tmp_bas(1:3,1,basis%nspec) = vec(1:3)
+          tmp_bas(basis%nspec,1,1:3) = vec(1:3)
           tmp_num(basis%nspec) = 1
        else
           checkspec: do j = 1, basis%nspec
              if(tmp_spec(j).eq.ctmp)then
                 tmp_num(j) = tmp_num(j)+1
-                tmp_bas(1:3,tmp_num(j),j) = vec(1:3)
+                tmp_bas(j,tmp_num(j),1:3) = vec(1:3)
                 exit checkspec
              end if
           end do checkspec
@@ -862,9 +862,9 @@ contains
     do i = 1, basis%nspec
        basis%spec(i)%name = tmp_spec(i)
        basis%spec(i)%num  = tmp_num(i)
-       allocate(basis%spec(i)%atom(length_,tmp_num(i)))
+       allocate(basis%spec(i)%atom(tmp_num(i),length_))
        basis%spec(i)%atom(:,:) = 0
-       basis%spec(i)%atom(1:3,1:tmp_num(i)) = tmp_bas(1:3,1:tmp_num(i),i)
+       basis%spec(i)%atom(1:tmp_num(i),1:3) = tmp_bas(i,1:tmp_num(i),1:3)
     end do
 
     if(present(iostat)) iostat = iostat_
@@ -894,7 +894,7 @@ contains
     do i = 1, basis%nspec
        do j = 1, basis%spec(i)%num
           write(UNIT,'(A5,1X,3(F15.9))') &
-               basis%spec(i)%name,basis%spec(i)%atom(1:3,j)
+               basis%spec(i)%name,basis%spec(i)%atom(j,1:3)
        end do
     end do
 
@@ -965,7 +965,7 @@ contains
     end if
     index1 = index(buffer,'Lattice="') + 9
     index2 = index(buffer(index1:),'"') + index1 - 2
-    read(buffer(index1:index2),*) ( ( basis%lat(j,i), j = 1, 3), i = 1, 3)
+    read(buffer(index1:index2),*) ( ( basis%lat(i,j), j = 1, 3), i = 1, 3)
 
     index1 = index(buffer,'free_energy=') + 12
     read(buffer(index1:),*) basis%energy
@@ -976,8 +976,8 @@ contains
     !---------------------------------------------------------------------------
     allocate(tmp_spec(basis%natom))
     allocate(tmp_num(basis%natom))
-    allocate(tmp_bas(length_,basis%natom,basis%natom))
-    allocate(tmp_force(3,basis%natom,basis%natom))
+    allocate(tmp_bas(basis%natom,basis%natom,length_))
+    allocate(tmp_force(basis%natom,basis%natom,3))
     tmp_num(:) = 0
     tmp_spec = ""
     tmp_bas = 0
@@ -987,15 +987,15 @@ contains
        if(.not.any(tmp_spec(1:basis%nspec).eq.ctmp))then
           basis%nspec=basis%nspec+1
           tmp_spec(basis%nspec) = trim(adjustl(ctmp))
-          tmp_bas(1:3,1,basis%nspec) = vec(1:3)
-          tmp_force(1:3,1,basis%nspec) = force(1:3)
+          tmp_bas(basis%nspec,1,1:3) = vec(1:3)
+          tmp_force(basis%nspec,1,1:3) = force(1:3)
           tmp_num(basis%nspec) = 1
        else
           checkspec: do j = 1, basis%nspec
              if(tmp_spec(j).eq.ctmp)then
                 tmp_num(j) = tmp_num(j) + 1
-                tmp_bas(1:3,tmp_num(j),j) = vec(1:3)
-                tmp_force(1:3,tmp_num(j),j) = force(1:3)
+                tmp_bas(j,tmp_num(j),1:3) = vec(1:3)
+                tmp_force(j,tmp_num(j),1:3) = force(1:3)
                 exit checkspec
              end if
           end do checkspec
@@ -1012,11 +1012,11 @@ contains
     do i = 1, basis%nspec
        basis%spec(i)%name = tmp_spec(i)
        basis%spec(i)%num = tmp_num(i)
-       allocate(basis%spec(i)%atom(length_,tmp_num(i)))
-       allocate(basis%spec(i)%force(3,tmp_num(i)))
+       allocate(basis%spec(i)%atom(tmp_num(i),length_))
+       allocate(basis%spec(i)%force(tmp_num(i),3))
        basis%spec(i)%atom(:,:) = 0
-       basis%spec(i)%atom(1:3,1:tmp_num(i)) = tmp_bas(1:3,1:tmp_num(i),i)
-       basis%spec(i)%force(1:3,1:tmp_num(i)) = tmp_force(1:3,1:tmp_num(i),i)
+       basis%spec(i)%atom(1:tmp_num(i),1:3) = tmp_bas(i,1:tmp_num(i),1:3)
+       basis%spec(i)%force(1:tmp_num(i),1:3) = tmp_force(i,1:tmp_num(i),1:3)
        write(buffer,'(I0,A)') basis%spec(i)%num,trim(basis%spec(i)%name)
        basis%sysname = basis%sysname//trim(buffer)
        if(i.lt.basis%nspec) basis%sysname = trim(adjustl(basis%sysname))//"_"
@@ -1046,21 +1046,21 @@ contains
 
     write(UNIT,'(I0)') basis%natom
     write(UNIT,'(A,8(F0.8,1X),F0.8,A)', advance="no") &
-         'Lattice="',((basis%lat(j,i),j=1,3),i=1,3),'"'
+         'Lattice="',((basis%lat(i,j),j=1,3),i=1,3),'"'
     write(UNIT,'(A,F0.8)', advance="no") ' free_energy=',basis%energy
     write(UNIT,'(A)', advance="no") ' pbc="T T T"'
     if(basis%lcart)then
        do i = 1, basis%nspec
           do j = 1, basis%spec(i)%num
              write(UNIT,'(A8,3(1X, F16.8))') &
-                  basis%spec(i)%name,basis%spec(i)%atom(1:3,j)
+                  basis%spec(i)%name,basis%spec(i)%atom(j,1:3)
           end do
        end do
     else
        do i = 1, basis%nspec
           do j = 1, basis%spec(i)%num
              write(UNIT,'(A8,3(1X, F16.8))') basis%spec(i)%name, &
-                  matmul(basis%spec(i)%atom(1:3,j),basis%lat)
+                  matmul(basis%spec(i)%atom(j,1:3),basis%lat)
           end do
        end do
     end if

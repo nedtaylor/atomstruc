@@ -22,9 +22,9 @@ module atomstruc__types
      logical, dimension(:), allocatable :: atom_mask
      !! The mask of the atoms of this species.
      real(real32), allocatable ,dimension(:,:) :: atom
-     !! The atomic positions of the species (axis, atom).
+     !! The atomic positions of the species (atom, axis).
      real(real32), allocatable, dimension(:,:) :: force
-     !! The forces on the atoms of the species (axis, atom).
+     !! The forces on the atoms of the species (atom, axis).
      real(real32) :: mass
      !! The mass of the species.
      real(real32) :: charge
@@ -73,6 +73,10 @@ module atomstruc__types
      !! Procedure to remove atoms from the basis.
      procedure, pass(this) :: set_element_properties_to_default
      !! Procedure to set the element properties to default values.
+     procedure, pass(this) :: normalise
+     !! Procedure to normalise the basis to between 0 and 1.
+     procedure, pass(this) :: change_lattice
+     !! Procedure to change the lattice of the basis.
   end type basis_type
 
 
@@ -150,9 +154,9 @@ contains
           iend = istart + this%spec(i)%num - 1
           allocate(this%spec(i)%atom_mask(this%spec(i)%num), source = .true.)
           allocate(this%spec(i)%atom_idx(this%spec(i)%num))
-          allocate(this%spec(i)%atom(3,this%spec(i)%num))
+          allocate(this%spec(i)%atom(this%spec(i)%num,3))
           if(present(atoms))then
-             this%spec(i)%atom = atoms(:3,istart:iend)
+             this%spec(i)%atom = atoms(istart:iend,:3)
           end if
           if(present(atom_idx_list))then
              this%spec(i)%atom_idx = atom_idx_list(istart:iend)
@@ -201,8 +205,8 @@ contains
     this%lcart = .not.this%lcart
     do is = 1, this%nspec
        do ia = 1, this%spec(is)%num
-          this%spec(is)%atom(1:3,ia) = &
-               matmul( this%spec(is)%atom(1:3,ia), lattice )
+          this%spec(is)%atom(ia,1:3) = &
+               matmul( this%spec(is)%atom(ia,1:3), lattice )
        end do
     end do
 
@@ -296,7 +300,7 @@ contains
     !---------------------------------------------------------------------------
     ! determines whether user wants output basis extra translational dimension
     !---------------------------------------------------------------------------
-    length_input = size(basis%spec(1)%atom,dim=1)
+    length_input = size(basis%spec(1)%atom,dim=2)
     if(present(length))then
        length_ = length
     else
@@ -326,8 +330,8 @@ contains
     do i = 1, basis%nspec
        allocate(this%spec(i)%atom_mask(basis%spec(i)%num), source = .true.)
        allocate(this%spec(i)%atom_idx(basis%spec(i)%num))
-       allocate(this%spec(i)%atom(length_,basis%spec(i)%num))
-       allocate(this%spec(i)%force(3,basis%spec(i)%num))
+       allocate(this%spec(i)%atom(basis%spec(i)%num,length_))
+       allocate(this%spec(i)%force(basis%spec(i)%num,3))
 
        if(allocated(basis%spec(i)%atom_mask)) &
             this%spec(i)%atom_mask = basis%spec(i)%atom_mask
@@ -339,12 +343,12 @@ contains
                sum(basis%spec(1:i)%num) ) ]
        end if
        if(length_input.eq.length_)then
-          this%spec(i)%atom(:length_,:) = basis%spec(i)%atom(:length_,:)
+          this%spec(i)%atom(:,:length_) = basis%spec(i)%atom(:,:length_)
        elseif(length_input.gt.length_)then
-          this%spec(i)%atom(:3,:) = basis%spec(i)%atom(:3,:)
+          this%spec(i)%atom(:,:3) = basis%spec(i)%atom(:,:3)
        elseif(length_input.lt.length_)then
-          this%spec(i)%atom(:3,:) = basis%spec(i)%atom(:3,:)
-          this%spec(i)%atom(4,:) = 1._real32
+          this%spec(i)%atom(:,:3) = basis%spec(i)%atom(:,:3)
+          this%spec(i)%atom(:,4) = 1._real32
        end if
        if(allocated(basis%spec(i)%force)) &
             this%spec(i)%force(:,:) = basis%spec(i)%force(:,:)
@@ -443,7 +447,7 @@ contains
     if(present(mask)) mask_ = mask
 
     this%natom = this%natom + 1
-    length = size(this%spec(1)%atom,dim=1)
+    length = size(this%spec(1)%atom,dim=2)
     idx = findloc(this%spec(:)%name, strip_null(species), dim=1)
     if(idx.eq.0)then
        this%nspec = this%nspec + 1
@@ -460,9 +464,9 @@ contains
        allocate(species_list(this%nspec)%atom_idx(1))
        allocate(species_list(this%nspec)%atom_mask(1), source = mask_)
        species_list(this%nspec)%atom_idx(1) = this%natom
-       allocate(species_list(this%nspec)%atom(length,1))
-       species_list(this%nspec)%atom(:,1) = 0._real32
-       species_list(this%nspec)%atom(:3,1) = position
+       allocate(species_list(this%nspec)%atom(1,length))
+       species_list(this%nspec)%atom(1,:) = 0._real32
+       species_list(this%nspec)%atom(1,:3) = position
        this%spec = species_list
        deallocate(species_list)
     else
@@ -478,10 +482,10 @@ contains
           atom_idx(1:this%spec(idx)%num) = [ ( j, j = 1, this%spec(idx)%num ) ]
        end if
        atom_idx(this%spec(idx)%num+1) = this%natom
-       allocate(positions(length,this%spec(idx)%num+1))
+       allocate(positions(this%spec(idx)%num+1,length))
        positions = 0._real32
-       positions(:,1:this%spec(idx)%num) = this%spec(idx)%atom
-       positions(:3,this%spec(idx)%num+1) = position
+       positions(1:this%spec(idx)%num,:) = this%spec(idx)%atom
+       positions(this%spec(idx)%num+1,:3) = position
        this%spec(idx)%num = this%spec(idx)%num + 1
        this%spec(idx)%atom_mask = atom_mask
        this%spec(idx)%atom_idx = atom_idx
@@ -531,29 +535,29 @@ contains
           end if
           allocate(atom_mask(this%spec(i)%num-1), source = .true.)
           allocate(atom_idx(this%spec(i)%num-1))
-          allocate(atom(size(this%spec(i)%atom,1),this%spec(i)%num-1))
+          allocate(atom(this%spec(i)%num-1,size(this%spec(i)%atom,2)))
           if(iatom.eq.1)then
              atom_mask(1:this%spec(i)%num-1) = &
                   this%spec(i)%atom_mask(2:this%spec(i)%num:1)
              atom_idx(1:this%spec(i)%num-1) = &
                   this%spec(i)%atom_idx(2:this%spec(i)%num:1)
-             atom(:,1:this%spec(i)%num-1:1) = &
-                  this%spec(i)%atom(:,2:this%spec(i)%num:1)
+             atom(1:this%spec(i)%num-1:1,:) = &
+                  this%spec(i)%atom(2:this%spec(i)%num:1,:)
           elseif(iatom.eq.this%spec(i)%num)then
              atom_mask(1:this%spec(i)%num-1) = &
                   this%spec(i)%atom_mask(1:this%spec(i)%num-1:1)
              atom_idx(1:this%spec(i)%num-1) = &
                   this%spec(i)%atom_idx(1:this%spec(i)%num-1:1)
-             atom(:,1:this%spec(i)%num-1:1) = &
-                  this%spec(i)%atom(:,1:this%spec(i)%num-1:1)
+             atom(1:this%spec(i)%num-1:1,:) = &
+                  this%spec(i)%atom(1:this%spec(i)%num-1:1,:)
           else
              atom_mask(1:iatom-1:1) = this%spec(i)%atom_mask(1:iatom-1:1)
              atom_idx(1:iatom-1:1) = this%spec(i)%atom_idx(1:iatom-1:1)
              atom_idx(iatom:this%spec(i)%num-1:1) = &
                   this%spec(i)%atom_idx(iatom+1:this%spec(i)%num:1)
-             atom(:,1:iatom-1:1) = this%spec(i)%atom(:,1:iatom-1:1)
-             atom(:,iatom:this%spec(i)%num-1:1) = &
-                  this%spec(i)%atom(:,iatom+1:this%spec(i)%num:1)
+             atom(1:iatom-1:1,:) = this%spec(i)%atom(1:iatom-1:1,:)
+             atom(iatom:this%spec(i)%num-1:1,:) = &
+                  this%spec(i)%atom(iatom+1:this%spec(i)%num:1,:)
           end if
           where(atom_idx(1:this%spec(i)%num-1:1).gt.remove_idx)
              atom_idx(1:this%spec(i)%num-1:1) = &
@@ -684,6 +688,92 @@ contains
     end do
 
   end subroutine set_element_properties_to_default
+!###############################################################################
+
+
+!###############################################################################
+  subroutine normalise( &
+       this, &
+       ceil_val, &
+       floor_coords, round_coords, &
+       zero_round &
+  )
+    !! Normalise the basis coordinates to between 0 and 1.
+    implicit none
+
+    ! Arguments
+    class(basis_type), intent(inout) :: this
+    !! Parent. The basis to normalise.
+    real(real32), intent(in), optional :: ceil_val
+    !! Optional. The ceiling value for normalisation (default 1.0).
+    logical, intent(in), optional :: floor_coords
+    !! Optional. Whether to floor the coordinates.
+    logical, intent(in), optional :: round_coords
+    !! Optional. Whether to round near-boundary coordinates to zero.
+    real(real32), intent(in), optional :: zero_round
+    !! Optional. Value to assign when a coordinate is near zero.
+
+    ! Local variables
+    integer :: is, ia, j
+    real(real32) :: ceil_val_, floor_val, tol
+    logical :: floor_coords_, round_coords_
+
+    ceil_val_ = 1._real32
+    floor_coords_ = .false.
+    round_coords_ = .false.
+    tol = 1.E-8_real32
+    if(present(ceil_val))    ceil_val_    = ceil_val
+    if(present(floor_coords)) floor_coords_ = floor_coords
+    if(present(round_coords)) round_coords_ = round_coords
+    floor_val = ceil_val_ - 1._real32
+
+    do is = 1, this%nspec
+       do ia = 1, this%spec(is)%num
+          do j = 1, 3
+             if(floor_coords_)then
+                this%spec(is)%atom(ia,j) = this%spec(is)%atom(ia,j) - &
+                     floor(this%spec(is)%atom(ia,j) - floor_val)
+             else
+                this%spec(is)%atom(ia,j) = this%spec(is)%atom(ia,j) - &
+                     ceiling(this%spec(is)%atom(ia,j) - ceil_val_)
+             end if
+             if(round_coords_)then
+                if( abs(this%spec(is)%atom(ia,j) - ceil_val_) .lt. tol .or. &
+                     abs(this%spec(is)%atom(ia,j)) .lt. tol ) &
+                     this%spec(is)%atom(ia,j) = floor_val
+             end if
+             if(present(zero_round))then
+                if( abs(this%spec(is)%atom(ia,j)) .lt. tol ) &
+                     this%spec(is)%atom(ia,j) = zero_round
+             end if
+          end do
+       end do
+    end do
+
+  end subroutine normalise
+!###############################################################################
+
+
+!###############################################################################
+  subroutine change_lattice(this, lattice)
+    !! Change the lattice of the basis, preserving Cartesian atom positions.
+    implicit none
+
+    ! Arguments
+    class(basis_type), intent(inout) :: this
+    !! Parent. The basis to transform.
+    real(real32), dimension(3,3), intent(in) :: lattice
+    !! The new lattice (vector, component) convention.
+
+    ! Local variables
+    logical :: lcart
+
+    lcart = this%lcart
+    if(.not.lcart) call this%convert()
+    this%lat = lattice
+    if(.not.lcart) call this%convert()
+
+  end subroutine change_lattice
 !###############################################################################
 
 end module atomstruc__types
