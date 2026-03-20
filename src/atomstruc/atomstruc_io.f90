@@ -442,7 +442,7 @@ contains
        basis%spec(i)%num = 0
        allocate(basis%spec(i)%atom_idx(tmp_natom(i)))
        allocate(basis%spec(i)%atom_mask(tmp_natom(i)), source = .true.)
-       allocate(basis%spec(i)%atom(tmp_natom(i),length_))
+       allocate(basis%spec(i)%atom(length_,tmp_natom(i)))
     end do
 
     call jump(UNIT,iline)
@@ -1060,7 +1060,7 @@ contains
        do i = 1, basis%nspec
           do j = 1, basis%spec(i)%num
              write(UNIT,'(A8,3(1X, F16.8))') basis%spec(i)%name, &
-                  matmul(basis%spec(i)%atom(1:3,j),basis%lat)
+                  matmul(basis%lat,basis%spec(i)%atom(1:3,j))
           end do
        end do
     end if
@@ -1097,14 +1097,14 @@ contains
     lattice=0._real32
 
     lattice(1,1)=abc(1)
-    lattice(2,:2)=(/abc(2)*cos(in_angle(3)),abc(2)*sin(in_angle(3))/)
+    lattice(:2,2)=(/abc(2)*cos(in_angle(3)),abc(2)*sin(in_angle(3))/)
 
-    lattice(3,1) = abc(3)*cos(in_angle(2))
-    lattice(3,2) = abc(3)*(cos(in_angle(1)) - cos(in_angle(2))*&
+    lattice(1,3) = abc(3)*cos(in_angle(2))
+    lattice(2,3) = abc(3)*(cos(in_angle(1)) - cos(in_angle(2))*&
          cos(in_angle(3)))/sin(in_angle(3))
     lattice(3,3) = sqrt(abc(3)**2._real32 - &
-         lattice(3,1)**2._real32 - &
-         lattice(3,2)**2._real32)
+         lattice(1,3)**2._real32 - &
+         lattice(2,3)**2._real32)
 
   end function convert_abc_to_lat
 !###############################################################################
@@ -1129,15 +1129,15 @@ contains
 
 
     do i = 1, 3
-       abc_angle(1,i)=norm2(lattice(i,:))
+       abc_angle(1,i)=norm2(lattice(:,i))
     end do
     do i = 1, 3
     end do
-    abc_angle(2,1)=acos(dot_product(lattice(2,:),lattice(3,:))/&
+    abc_angle(2,1)=acos(dot_product(lattice(:,2),lattice(:,3))/&
          (abc_angle(1,2)*abc_angle(1,3)))
-    abc_angle(2,3)=acos(dot_product(lattice(1,:),lattice(3,:))/&
+    abc_angle(2,2)=acos(dot_product(lattice(:,1),lattice(:,3))/&
          (abc_angle(1,1)*abc_angle(1,3)))
-    abc_angle(2,3)=acos(dot_product(lattice(1,:),lattice(2,:))/&
+    abc_angle(2,3)=acos(dot_product(lattice(:,1),lattice(:,2))/&
          (abc_angle(1,1)*abc_angle(1,2)))
 
     if(present(radians))then

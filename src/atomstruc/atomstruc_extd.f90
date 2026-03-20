@@ -261,7 +261,7 @@ contains
        ! point_ = matmul(LUinv(lattice), point)
        point_ = point
     else
-       point_ = matmul(point, lattice)
+       point_ = matmul(lattice, point)
     end if
 
     min_distance = huge(1._real32)
@@ -277,8 +277,8 @@ contains
        plane_point = 0._real32
        direction_loop: do j = 1, 2
           normal = (-1._real32)**j * cross( &
-               [ lattice(index_list(2),:3) ], &
-               [ lattice(index_list(3),:3) ] &
+               [ lattice(:3,index_list(2)) ], &
+               [ lattice(:3,index_list(3)) ] &
           )
           normal = normal / norm2(normal)
           projection = project_point_onto_plane(point_, plane_point, normal)
@@ -286,14 +286,14 @@ contains
           ! check if point minus projection is negative
           ! if so, it is on the wrong side of the plane and should be ignored
           if( dot_product(point_ - projection, normal) .lt. 0._real32 )then
-             plane_point = plane_point + lattice(index_list(1),:)
+             plane_point = plane_point + lattice(:,index_list(1))
              cycle direction_loop
           end if
           is_outside = .true.
 
           ! check if projection is outside the surface
 
-          inverse_projection = matmul(projection, inverse_lattice)
+          inverse_projection = matmul(inverse_lattice, projection)
           if( &
                any( inverse_projection .lt. 0._real32 ) .or. &
                any( inverse_projection .gt. 1._real32 ) &
@@ -310,7 +310,7 @@ contains
                 end if
              end do
           end if
-          projection = matmul(inverse_projection, lattice)
+          projection = matmul(lattice, inverse_projection)
           distance = norm2(point_ - projection)
           if( distance .lt. min_distance ) then
              min_distance = distance
@@ -318,7 +318,7 @@ contains
           end if
 
           !! makes it apply to the next iteration
-          plane_point = plane_point + lattice(index_list(1),:)
+          plane_point = plane_point + lattice(:,index_list(1))
        end do direction_loop
     end do face_loop
 

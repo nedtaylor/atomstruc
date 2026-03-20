@@ -202,7 +202,7 @@ contains
     do is = 1, this%nspec
        do ia = 1, this%spec(is)%num
           this%spec(is)%atom(1:3,ia) = &
-               matmul( this%spec(is)%atom(1:3,ia), lattice )
+               matmul( lattice, this%spec(is)%atom(1:3,ia) )
        end do
     end do
 
@@ -253,15 +253,15 @@ contains
 
 
     do i = 1, 3
-       abc_angle(1,i)=norm2(lattice(i,:))
+       abc_angle(1,i)=norm2(lattice(:,i))
     end do
     do i = 1, 3
     end do
-    abc_angle(2,1)=acos(dot_product(lattice(2,:),lattice(3,:))/&
+    abc_angle(2,1)=acos(dot_product(lattice(:,2),lattice(:,3))/&
          (abc_angle(1,2)*abc_angle(1,3)))
-    abc_angle(2,3)=acos(dot_product(lattice(1,:),lattice(3,:))/&
+    abc_angle(2,2)=acos(dot_product(lattice(:,1),lattice(:,3))/&
          (abc_angle(1,1)*abc_angle(1,3)))
-    abc_angle(2,3)=acos(dot_product(lattice(1,:),lattice(2,:))/&
+    abc_angle(2,3)=acos(dot_product(lattice(:,1),lattice(:,2))/&
          (abc_angle(1,1)*abc_angle(1,2)))
 
     if(present(radians))then
