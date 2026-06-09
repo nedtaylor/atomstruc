@@ -182,10 +182,14 @@ set_target_properties(${PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY ${MODU
 target_link_libraries(${PROJECT_NAME} PUBLIC)
 
 # replace ".f90" with ".mod"
-string(REGEX REPLACE "\\.[^.]*$" ".mod" MODULE_FILES "${SRC_FILES}")
+set(MODULE_FILES "")
+foreach(src ${SRC_FILES})
+    get_filename_component(src_name ${src} NAME_WE)
+    list(APPEND MODULE_FILES "${MODULE_DIR}/${src_name}.mod")
+endforeach()
 
 # installation
-install(FILES ${MODULE_DIR}/${MODULE_FILES} DESTINATION include)
+install(FILES ${MODULE_FILES} DESTINATION include)
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
 
 # set compile options based on different build configurations
