@@ -14,7 +14,7 @@ project(atomstruc NONE)
 # set the library name
 set( LIB_NAME ${PROJECT_NAME} )
 set( PROJECT_DESCRIPTION
-  "Fortran neural network" )
+  "Fortran materials object handler" )
 set( PROJECT_URL "https://github.com/nedtaylor/atomstruc" )
 set( CMAKE_CONFIGURATION_TYPES "Release" "Parallel" "Serial" "Dev" "Debug" "Parallel_Dev"
   CACHE STRING "List of configurations types." )
@@ -48,20 +48,52 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug*" OR CMAKE_BUILD_TYPE MATCHES "Dev*")
   endif()
 endif()
 
-# set up the coreutils dependency
-include(FetchContent)
-# Disable testing for dependencies - both standard variables
-set(BUILD_TESTING OFF)
-set(BUILD_TESTS OFF)
-FetchContent_Declare(
-    coreutils
-    GIT_REPOSITORY https://github.com/nedtaylor/coreutils.git
-    GIT_TAG        main
-    FIND_PACKAGE_ARGS NAMES coreutils
-)
-FetchContent_MakeAvailable(coreutils)
-# Re-enable BUILD_TESTS for our project
-set(BUILD_TESTS ON)
+# FIX: Check if coreutils target already exists before fetching
+if(NOT TARGET coreutils)
+  message(STATUS "coreutils target not found, fetching it now...")
+
+  # set up the coreutils dependency
+  include(FetchContent)
+
+  # Disable testing for dependencies - both standard variables
+  set(BUILD_TESTING_OLD ${BUILD_TESTING})
+  set(BUILD_TESTS_OLD ${BUILD_TESTS})
+  set(BUILD_TESTING OFF)
+  set(BUILD_TESTS OFF)
+
+  # Check if coreutils has already been declared
+  if(NOT coreutils_POPULATED)
+    FetchContent_Declare(
+        coreutils
+        GIT_REPOSITORY https://github.com/nedtaylor/coreutils.git
+        GIT_TAG        main
+        FIND_PACKAGE_ARGS NAMES coreutils
+    )
+    FetchContent_MakeAvailable(coreutils)
+  else()
+    message(STATUS "coreutils already populated, skipping declaration")
+  endif()
+
+  # Restore original BUILD_TESTS values for our project
+  set(BUILD_TESTING ${BUILD_TESTING_OLD})
+  set(BUILD_TESTS ${BUILD_TESTS_OLD})
+else()
+  message(STATUS "coreutils target already exists, skipping fetch")
+endif()
+
+# Only set variables if coreutils target exists
+if(TARGET coreutils)
+  message(STATUS "coreutils found as target")
+  # Set variables for compatibility - avoid using LOCATION property
+  set(coreutils_DIR ${CMAKE_CURRENT_BINARY_DIR}/_deps/coreutils-build)
+  # Use generator expressions for properties that might be needed later
+  set(coreutils_INCLUDE_DIRS $<TARGET_PROPERTY:coreutils,Fortran_MODULE_DIRECTORY>)
+  set(coreutils_BUILD_DIRS ${CMAKE_CURRENT_BINARY_DIR}/_deps/coreutils-build)
+endif()
+
+message(STATUS "coreutils home directory: ${coreutils_DIR}")
+message(STATUS "coreutils include directory: ${coreutils_INCLUDE_DIRS}")
+message(STATUS "coreutils source directory: ${coreutils_BUILD_DIRS}")
 
 # Only enable testing and options when this is the main project
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -143,35 +175,17 @@ endif()
 
 set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${PPFLAGS}")
 
-# Add custom build types for different configurations
-# add_compile_options("$<$<CONFIG:dev>:${DEVFLAGS}>")
-# add_compile_options("$<$<CONFIG:debug>:${DEBUGFLAGS}>")
-# add_compile_options("$<$<CONFIG:warn>:${WARNFLAGS}>")
-# add_compile_options("$<$<CONFIG:optim>:${OPTIMFLAGS}>")
-# add_compile_options("$<$<CONFIG:fast>:${FASTFLAGS}>")
-# add_compile_options("$<$<CONFIG:mp>:${MPFLAGS}>")
-
-
-
-
 # create the library
 add_library(${PROJECT_NAME} STATIC ${ALL_SOURCES})
-set(MODULE_DIR ${CMAKE_CURRENT_BINARY_DIR}/mod)
+set(MODULE_DIR ${CMAKE_BUILD_PREFIX}/mod)
 set_target_properties(${PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_DIR})
-target_link_libraries(${PROJECT_NAME} PUBLIC coreutils)
-target_include_directories(${PROJECT_NAME} PUBLIC $<TARGET_PROPERTY:coreutils,Fortran_MODULE_DIRECTORY>)
-
-
+target_link_libraries(${PROJECT_NAME} PUBLIC)
 
 # replace ".f90" with ".mod"
-set(MODULE_FILES "")
-foreach(src ${SRC_FILES})
-    get_filename_component(src_name ${src} NAME_WE)
-    list(APPEND MODULE_FILES "${MODULE_DIR}/${src_name}.mod")
-endforeach()
+string(REGEX REPLACE "\\.[^.]*$" ".mod" MODULE_FILES "${SRC_FILES}")
 
 # installation
-install(FILES ${MODULE_FILES} DESTINATION include)
+install(FILES ${MODULE_DIR}/${MODULE_FILES} DESTINATION include)
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
 
 # set compile options based on different build configurations
@@ -183,13 +197,14 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${DEBUGFLAGS}>"
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Parallel_Dev>:${MPFLAGS}>")
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Parallel_Dev>:${DEVFLAGS}>")
 
-# add library dependencies
-add_dependencies(${PROJECT_NAME} coreutils)
-
-# # include the build test directory only if this is the main project
-# if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTS)
-#   add_subdirectory(test)
-# endif()
+# FIX: Only add dependencies if the target exists
+if(TARGET coreutils)
+  # add library dependencies
+  add_dependencies(${PROJECT_NAME} coreutils)
+  target_link_libraries(${PROJECT_NAME} PUBLIC coreutils)
+else()
+  message(WARNING "coreutils target not available, some functionality may be missing")
+endif()
 
 # add coverage compiler flags
 if ( ( CMAKE_Fortran_COMPILER MATCHES ".*gfortran.*" OR CMAKE_Fortran_COMPILER MATCHES ".*gcc.*" ) AND
